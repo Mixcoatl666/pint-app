@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  pins     Pin[]
+  boards   Board[]
+  comments Comment[]
+  saves    Save[]
+}
+
+model Pin {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  width       Int
+  height      Int
+  createdAt   DateTime @default(now())
+
+  ownerId  String
+  owner    User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  saves    Save[]
+  comments Comment[]
+
+  @@index([createdAt])
+  @@index([ownerId])
+}
+
+model Board {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  saves   Save[]
+}
+
+model Save {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  pinId   String
+  boardId String
+  userId  String
+
+  pin   Pin   @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pinId, boardId])
+  @@index([boardId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  authorId String
+  pinId    String
+  parentId String?
+
+  author  User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  pin     Pin       @relation(fields: [pinId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([pinId])
+  @@index([parentId])
+}
